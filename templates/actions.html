@@ -1,52 +1,44 @@
-<!doctype html>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azioni - Scomposizione Musicale</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { text-align: center; color: #333; }
+        .file-name { text-align: center; color: #007bff; font-weight: bold; margin-bottom: 20px; }
+        .action-group { margin-bottom: 20px; }
+        select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        button { width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #218838; }
+        .btn-cancel { background-color: #6c757d; margin-top: 10px; }
+        .btn-cancel:hover { background-color: #5a6268; }
+    </style>
+</head>
 <body>
-
-<h1>Audio Stem Processor</h1>
-
-<!-- 🔥 PRESET BUTTONS -->
-<form method="POST" action="/process">
-
-    <button type="submit" name="action" value="no_vocals">
-        Rimuovi voce
-    </button>
-
-    <button type="submit" name="action" value="no_bass">
-        Rimuovi basso
-    </button>
-
-    <button type="submit" name="action" value="no_drums">
-        Rimuovi batteria
-    </button>
-
-    <button type="submit" name="action" value="split_all">
-        Dividi tutto (stems completi)
-    </button>
-
-    <hr>
-
-    <h2>Modalità avanzata</h2>
-
-    <input type="checkbox" name="keep_voice" value="1">
-    <label>Conserva voce</label><br>
-
-    <input type="checkbox" name="keep_drums" value="1">
-    <label>Conserva batteria</label><br>
-
-    <input type="checkbox" name="keep_bass" value="1">
-    <label>Conserva basso</label><br>
-
-    <input type="checkbox" name="keep_other" value="1">
-    <label>Conserva altri strumenti</label><br>
-
-    <br>
-
-    <input type="checkbox" name="export_zip" value="1">
-    <label>Scarica ZIP con tutte le tracce separate</label><br><br>
-
-    <button type="submit" name="action" value="advanced">
-        Esegui avanzato
-    </button>
-
-</form>
-
+    <div class="container">
+        <h2>Scegli l'operazione</h2>
+        <p class="file-name">File selezionato: {{ filename }}</p>
+        
+        <form action="{{ url_for('chose_actions', name=filename) }}" method="POST">
+            <div class="action-group">
+                <label for="action">Tipo di estrazione:</label>
+                <select name="action" id="action" required>
+                    <option value="no_vocals">Rimuovi Voce (Karaoke)</option>
+                    <option value="no_bass">Rimuovi Basso</option>
+                    <option value="no_drums">Rimuovi Batteria</option>
+                    <option value="split_all">Dividi tutte le tracce (Stems completi)</option>
+                </select>
+            </div>
+            
+            <button type="submit">Avvia Elaborazione in Background</button>
+        </form>
+        
+        <form action="{{ url_for('index') }}" method="GET">
+            <button type="submit" class="btn-cancel">Annulla e torna alla Home</button>
+        </form>
+    </div>
 </body>
+</html>

@@ -1,7 +1,104 @@
-<!doctype html>
-    <title>Upload new File</title>
-    <h1>Upload new File</h1>
-    <form method=post enctype=multipart/form-data>
-      <input type=file name=file>
-      <input type=submit value=Upload>
-    </form>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Scomposizione Musicale</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .btn-logout { background-color: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 4px; }
+        .btn-logout:hover { background-color: #c82333; }
+        .container { display: flex; gap: 20px; flex-wrap: wrap; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex: 1; min-width: 300px; }
+        .alert-info { padding: 10px; background-color: #d1ecf1; color: #0c5460; margin-bottom: 15px; border-radius: 4px; }
+        input[type="file"] { margin-bottom: 10px; }
+        button[type="submit"] { background-color: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
+        button[type="submit"]:hover { background-color: #0056b3; }
+        ul { list-style-type: none; padding: 0; }
+        li { background: #f8f9fa; margin-bottom: 8px; padding: 10px; border-radius: 4px; border: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
+        .status-badge { background: #ffc107; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .status-completato { background: #28a745; color: white; }
+        
+        /* Stili per i bottoni di download */
+        .btn-download { background-color: #6c757d; color: white; text-decoration: none; padding: 5px 10px; border-radius: 4px; font-size: 13px; margin-left: 5px; }
+        .btn-download:hover { background-color: #5a6268; }
+        .btn-audio { background-color: #17a2b8; }
+        .btn-audio:hover { background-color: #138496; }
+        .actions-col { display: flex; gap: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>Benvenuto, {{ username }}!</h2>
+        <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert-info">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="container">
+        <!-- SEZIONE UPLOAD -->
+        <div class="card">
+            <h3>Carica un nuovo brano</h3>
+            <form action="{{ url_for('index') }}" method="POST" enctype="multipart/form-data">
+                <input type="file" name="file" accept=".mp3,.wav" required>
+                <br>
+                <button type="submit">Carica e vai alle Azioni</button>
+            </form>
+        </div>
+
+        <!-- SEZIONE TASK IN BACKGROUND -->
+        <div class="card">
+            <h3>Stato Elaborazioni in Background</h3>
+            {% if tasks %}
+                <ul>
+                    {% for task_id, task_info in tasks.items() %}
+                        <li>
+                            <span><b>{{ task_info.file }}</b> ({{ task_info.action }})</span>
+                            <span class="status-badge {% if task_info.status == 'Completato' %}status-completato{% endif %}">
+                                {{ task_info.status }}
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ul>
+                <small><i>Ricarica la pagina (F5) per aggiornare lo stato.</i></small>
+            {% else %}
+                <p>Nessuna elaborazione in corso.</p>
+            {% endif %}
+        </div>
+
+        <!-- SEZIONE DOWNLOAD -->
+        <div class="card">
+            <h3>I tuoi file pronti</h3>
+            {% if files %}
+                <ul>
+                    {% for item in files %}
+                        <li>
+                            <span>{{ item.display_name }}</span>
+                            <div class="actions-col">
+                                <!-- Bottone SOLO per il ricomposto (se esiste) -->
+                                {% if item.recomposed_file %}
+                                    <a href="{{ url_for('download_file', filename=item.recomposed_file) }}" class="btn-download btn-audio" download>🎵 Solo Audio</a>
+                                {% endif %}
+                                
+                                <!-- Bottone ZIP Completo -->
+                                <a href="{{ url_for('download_file', filename=item.zip_file) }}" class="btn-download" download>📦 ZIP Completo</a>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Non hai ancora esportato nessun file.</p>
+            {% endif %}
+        </div>
+    </div>
+
+</body>
+</html>
