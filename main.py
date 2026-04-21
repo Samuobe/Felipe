@@ -7,6 +7,7 @@ import zipfile
 from flask import Flask, request, redirect, url_for, render_template, send_file, session, flash, send_from_directory
 from werkzeug.utils import secure_filename
 import yt_dlp 
+import traceback
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_session_key_for_separate_music' # Necessario per usare session
@@ -83,7 +84,6 @@ def index():
         youtube_url = request.form.get('youtube_url')
         if youtube_url and youtube_url.strip():
             try:
-                # Impostazioni per scaricare l'audio e aggirare i blocchi 403
                 ydl_opts = {
                     'format': 'bestaudio/best',
                     'postprocessors': [{
@@ -95,32 +95,23 @@ def index():
                     'restrictfilenames': True,
                     'noplaylist': True,
                     
-                    # --- FIX RETE / TIMEOUT ---
-                    'compat_opts': ['no-youtube-unavailable-videos'], # Evita controlli extra lenti
-                    'source_address': '0.0.0.0', # Forza IPv4 locale
-                    'force_ipv4': True,          # Forza IPv4 a livello DNS (fondamentale in LXC)
-                    
-                    # --- FIX ANTI-BOT ---
-                    'impersonate': 'chrome',
-                    'extractor_args': {'youtube': ['player_client=android']} # Android è spesso più leggero del client web
+                    # Tolto 'impersonate' perché manda in crash Python 3.9 su Debian.
+                    # Usiamo i client iOS e TV che sono meno bloccati da YouTube.
+                    'extractor_args': {'youtube': ['player_client=ios,tv']}
                 }
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    # Estrae le info e scarica
                     info_dict = ydl.extract_info(youtube_url, download=True)
                     
-                    # Genera un nome file sicuro basato sul titolo per la nostra app
                     video_title = info_dict.get('title', info_dict.get('id', 'youtube_audio'))
                     safe_title = secure_filename(video_title)
                     if not safe_title:
                         safe_title = info_dict.get('id', 'youtube_audio')
                         
-                    # Rinomina il file scaricato (ID.mp3) con il titolo pulito (Titolo.mp3)
                     downloaded_file = os.path.join(user_upload_dir, f"{info_dict['id']}.mp3")
                     final_filename = f"{safe_title}.mp3"
                     final_path = os.path.join(user_upload_dir, final_filename)
                     
-                    # Se esiste già un file con quel nome, lo sovrascrive
                     if os.path.exists(final_path):
                         os.remove(final_path)
                     os.rename(downloaded_file, final_path)
@@ -128,9 +119,10 @@ def index():
                 return redirect(url_for('chose_actions', name=final_filename))
                 
             except Exception as e:
-                # ORA STAMPIAMO L'ERRORE ESATTO per capire cosa non va!
-                print(f"Errore YouTube: {e}")
-                flash(f"Errore YouTube: {str(e)}")
+                # ORA STAMPIAMO L'ERRORE COMPLETO E DETTAGLIATO SUL TERMINALE
+                errore_completo = traceback.format_exc()
+                print(f"\n--- ERRORE GRAVE YOUTUBE ---\n{errore_completo}\n----------------------------\n")
+                flash("Errore YouTube: Controlla i log del server per i dettagli.")
                 return redirect(request.url)
                 
         # 2. Caso B: L'utente ha caricato un file normalmente
