@@ -95,9 +95,20 @@ def index():
                     'restrictfilenames': True,
                     'noplaylist': True,
                     
-                    # Tolto 'impersonate' perché manda in crash Python 3.9 su Debian.
-                    # Usiamo i client iOS e TV che sono meno bloccati da YouTube.
-                    'extractor_args': {'youtube': ['player_client=ios,tv']}
+                    # Rimuoviamo gli extractor_args che causano problemi
+                    'extractor_args': {'youtube': ['player_client=default']},
+                    
+                    # Forziamo IPv4 perché YouTube spesso banna i range IPv6 dei data center
+                    'source_address': '0.0.0.0',
+                    
+                    # Un'opzione che risolve molti blocchi 403 forzando il fall-back HTTP
+                    'http_headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                    },
+                    
+                    # Chiediamo esplicitamente a yt-dlp di usare i suoi trucchi di base
+                    'compat_opts': ['no-youtube-unavailable-videos'],
                 }
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
