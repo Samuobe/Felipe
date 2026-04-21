@@ -94,9 +94,11 @@ def index():
                     'outtmpl': os.path.join(user_upload_dir, '%(id)s.%(ext)s'),
                     'restrictfilenames': True,
                     'noplaylist': True,
-                    'source_address': '0.0.0.0', # Continua a forzare IPv4
-                    # Inganna YouTube usando l'API di iOS (molto meno bloccata)
-                    'extractor_args': {'youtube': ['client=ios']} 
+                    'source_address': '0.0.0.0',
+                    # Dice a yt-dlp di comportarsi esattamente come Chrome
+                    'impersonate': 'chrome', 
+                    # Usa il client web predefinito rimuovendo i client mobili obsoleti
+                    'extractor_args': {'youtube': ['player_client=default,-android_sdkless']}
                 }
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
