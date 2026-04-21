@@ -1,0 +1,52 @@
+<!doctype html>
+<body>
+
+<h1>Audio Stem Processor</h1>
+
+<!-- 🔥 PRESET BUTTONS -->
+<form method="POST" action="/process">
+
+    <button type="submit" name="action" value="no_vocals">
+        Rimuovi voce
+    </button>
+
+    <button type="submit" name="action" value="no_bass">
+        Rimuovi basso
+    </button>
+
+    <button type="submit" name="action" value="no_drums">
+        Rimuovi batteria
+    </button>
+
+    <button type="submit" name="action" value="split_all">
+        Dividi tutto (stems completi)
+    </button>
+
+    <hr>
+
+    <h2>Modalità avanzata</h2>
+
+    <input type="checkbox" name="keep_voice" value="1">
+    <label>Conserva voce</label><br>
+
+    <input type="checkbox" name="keep_drums" value="1">
+    <label>Conserva batteria</label><br>
+
+    <input type="checkbox" name="keep_bass" value="1">
+    <label>Conserva basso</label><br>
+
+    <input type="checkbox" name="keep_other" value="1">
+    <label>Conserva altri strumenti</label><br>
+
+    <br>
+
+    <input type="checkbox" name="export_zip" value="1">
+    <label>Scarica ZIP con tutte le tracce separate</label><br><br>
+
+    <button type="submit" name="action" value="advanced">
+        Esegui avanzato
+    </button>
+
+</form>
+
+</body>
