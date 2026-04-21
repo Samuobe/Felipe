@@ -94,8 +94,9 @@ def index():
                     'outtmpl': os.path.join(user_upload_dir, '%(id)s.%(ext)s'),
                     'restrictfilenames': True,
                     'noplaylist': True,
-                    'source_address': '0.0.0.0',
-                    'extractor_args': {'youtube': ['player_client=android']} 
+                    'source_address': '0.0.0.0', # Continua a forzare IPv4
+                    # Inganna YouTube usando l'API di iOS (molto meno bloccata)
+                    'extractor_args': {'youtube': ['client=ios']} 
                 }
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
