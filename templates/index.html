@@ -50,10 +50,23 @@
         <!-- SEZIONE UPLOAD -->
         <div class="card">
             <h3>Carica un nuovo brano</h3>
+            
+            <!-- Form 1: Caricamento File Tradizionale -->
             <form action="{{ url_for('index') }}" method="POST" enctype="multipart/form-data">
-                <input type="file" name="file" accept=".mp3,.wav" required>
-                <br>
-                <button type="submit">Carica e vai alle Azioni</button>
+                <label style="font-weight: bold;">Dal tuo dispositivo:</label><br>
+                <input type="file" name="file" accept=".mp3,.wav">
+                <button type="submit" style="margin-top: 5px;">Carica File</button>
+            </form>
+
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #ddd;">
+
+            <!-- Form 2: Download da YouTube -->
+            <form action="{{ url_for('index') }}" method="POST">
+                <label style="font-weight: bold;">Oppure incolla un link YouTube:</label><br>
+                <input type="text" name="youtube_url" placeholder="https://www.youtube.com/watch?v=..." 
+                       style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                <button type="submit" style="background-color: #ff0000;">Scarica da YouTube</button>
+                <br><small style="color: #666;">Il download potrebbe richiedere qualche secondo.</small>
             </form>
         </div>
 

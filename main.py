@@ -6,6 +6,7 @@ import time
 import zipfile
 from flask import Flask, request, redirect, url_for, render_template, send_file, session, flash, send_from_directory
 from werkzeug.utils import secure_filename
+import yt_dlp 
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_session_key_for_separate_music' # Necessario per usare session
@@ -78,13 +79,59 @@ def index():
     user_output_dir = get_user_dir(OUTPUT_FOLDER, username)
 
     if request.method == 'POST':
-        if 'file' not in request.files:
-            return redirect(request.url)
-        file = request.files['file']
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(user_upload_dir, filename))
-            return redirect(url_for('chose_actions', name=filename))
+               # 1. Caso A: L'utente ha incollato un link di YouTube
+        youtube_url = request.form.get('youtube_url')
+        if youtube_url and youtube_url.strip():
+            try:
+                # Impostazioni per scaricare l'audio
+                ydl_opts = {
+                    'format': 'bestaudio/best',
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': 'mp3',
+                        'preferredquality': '192',
+                    }],
+                    # Usiamo l'ID del video come nome iniziale per evitare crash con emoji/caratteri strani
+                    'outtmpl': os.path.join(user_upload_dir, '%(id)s.%(ext)s'),
+                    'restrictfilenames': True,
+                    'noplaylist': True,
+                }
+                
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    # Estrae le info e scarica
+                    info_dict = ydl.extract_info(youtube_url, download=True)
+                    
+                    # Genera un nome file sicuro basato sul titolo per la nostra app
+                    video_title = info_dict.get('title', info_dict.get('id', 'youtube_audio'))
+                    safe_title = secure_filename(video_title)
+                    if not safe_title:
+                        safe_title = info_dict.get('id', 'youtube_audio')
+                        
+                    # Rinomina il file scaricato (ID.mp3) con il titolo pulito (Titolo.mp3)
+                    downloaded_file = os.path.join(user_upload_dir, f"{info_dict['id']}.mp3")
+                    final_filename = f"{safe_title}.mp3"
+                    final_path = os.path.join(user_upload_dir, final_filename)
+                    
+                    # Se esiste già un file con quel nome, lo sovrascrive
+                    if os.path.exists(final_path):
+                        os.remove(final_path)
+                    os.rename(downloaded_file, final_path)
+                    
+                return redirect(url_for('chose_actions', name=final_filename))
+                
+            except Exception as e:
+                # ORA STAMPIAMO L'ERRORE ESATTO per capire cosa non va!
+                print(f"Errore YouTube: {e}")
+                flash(f"Errore YouTube: {str(e)}")
+                return redirect(request.url)
+                
+        # 2. Caso B: L'utente ha caricato un file normalmente
+        elif 'file' in request.files:
+            file = request.files['file']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(user_upload_dir, filename))
+                return redirect(url_for('chose_actions', name=filename))
 
     # Prepariamo i file da mostrare accoppiando ZIP e Audio Ricomposto
     files_data = []
@@ -92,7 +139,7 @@ def index():
     
     for f in all_files:
         if f.endswith('.zip'):
-            base_name = f[:-4] # Rimuove '.zip' per ottenere il nome base
+            base_name = f[:-4]
             recomposed_name = f"{base_name}_recomposed.mp3"
             has_recomposed = recomposed_name in all_files
             
@@ -222,9 +269,11 @@ def delete_file(base_name):
     if 'username' not in session:
         return redirect(url_for('login'))
         
-    user_output_dir = get_user_dir(OUTPUT_FOLDER, session['username'])
+    username = session['username']
+    user_output_dir = get_user_dir(OUTPUT_FOLDER, username)
+    user_upload_dir = get_user_dir(UPLOAD_FOLDER, username)
     
-    # Percorsi dei file da eliminare
+    # Percorsi dei file di output da eliminare
     zip_path = os.path.join(user_output_dir, f"{base_name}.zip")
     recomposed_path = os.path.join(user_output_dir, f"{base_name}_recomposed.mp3")
     
@@ -238,11 +287,118 @@ def delete_file(base_name):
         os.remove(recomposed_path)
         deleted = True
         
+    # Cerchiamo di dedurre il nome del file originale per eliminarlo dagli uploads.
+    # Il base_name è tipicamente nel formato "nomefile_azione" (es. brano_no_vocals).
+    # Risaliamo al nome rimuovendo l'azione alla fine:
+    for action in ["no_vocals", "no_bass", "no_drums"]:
+        if f"_{action}" in base_name:
+            # Ricostruisce il nome del file base senza il suffisso dell'azione e senza eventuali _1, _2
+            original_base = base_name.split(f"_{action}")[0]
+            
+            # Cerca se esiste un file con questo nome in formato .mp3 o .wav
+            for ext in ALLOWED_EXTENSIONS:
+                original_upload_path = os.path.join(user_upload_dir, f"{original_base}.{ext}")
+                if os.path.exists(original_upload_path):
+                    os.remove(original_upload_path)
+            break
+
+    # Pulizia del task_status per rimuoverlo anche dallo storico in background
+    keys_to_delete = []
+    for task_id, task_info in tasks_status.items():
+        if task_info['user'] == username and base_name.startswith(task_info['file'].rsplit('.', 1)[0]):
+            keys_to_delete.append(task_id)
+            
+    for k in keys_to_delete:
+        del tasks_status[k]
+
     if deleted:
-        flash(f'Esportazione "{base_name}" eliminata con successo.')
+        flash(f'Esportazione "{base_name}" e relativi file originali eliminati con successo.')
     else:
         flash(f'Impossibile trovare l\'esportazione "{base_name}".')
         
+    return redirect(url_for('index'))
+
+# --- ROTTE DEDICATE PER APP INVENTOR ---
+
+@app.route('/app_login')
+def app_login():
+    # Recupera le credenziali dall'URL
+    username = request.args.get('u')
+    password = request.args.get('p')
+
+    if username and password and os.path.exists(USERS_FILE):
+        with open(USERS_FILE, 'r') as f:
+            for line in f:
+                if not line.strip(): continue
+                u, p = line.strip().split(',')
+                if u == username and p == password:
+                    # Credenziali corrette: crea la sessione e vai alla home
+                    session['username'] = username
+                    return redirect(url_for('index'))
+                    
+    # Se fallisce, lo manda alla pagina di errore dedicata
+    return redirect(url_for('app_login_error'))
+
+
+@app.route('/app_login_error')
+def app_login_error():
+    # Pagina di errore che avvisa l'utente e lo riporta al vero login del sito
+    return """
+    <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body { font-family: Arial, sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
+                .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                h2 { color: #dc3545; margin-top: 0; }
+                a { display: inline-block; margin-top: 15px; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; }
+                a:hover { background-color: #0056b3; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <h2>Errore di Accesso</h2>
+                <p>Credenziali non valide o account inesistente.</p>
+                <a href="/login">Vai al Login del sito</a>
+            </div>
+        </body>
+    </html>
+    """
+
+
+@app.route('/app_register')
+def app_register():
+    # Recupera le credenziali dall'URL per la registrazione
+    username = request.args.get('u')
+    password = request.args.get('p')
+
+    if not username or not password:
+        return "Errore: nome utente o password mancanti nell'URL.", 400
+
+    # Controlla se l'utente esiste già
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, 'r') as f:
+            for line in f:
+                if not line.strip(): continue
+                u, _ = line.strip().split(',')
+                if u == username:
+                    return """
+                    <html>
+                        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+                            <h2 style="color: #dc3545;">Errore</h2>
+                            <p>Questo nome utente è già in uso.</p>
+                            <a href="/register" style="display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 4px;">Torna alla Registrazione</a>
+                        </body>
+                    </html>
+                    """
+
+    # Se l'utente non esiste, lo registra
+    with open(USERS_FILE, 'a') as f:
+        f.write(f"{username},{password}\n")
+    
+    # Lo logga automaticamente e lo manda alla home
+    session['username'] = username
+    flash('Registrazione da App completata con successo!')
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
