@@ -217,5 +217,33 @@ def download_file(filename):
     user_output_dir = get_user_dir(OUTPUT_FOLDER, session['username'])
     return send_from_directory(user_output_dir, filename, as_attachment=True)
 
+@app.route('/delete/<base_name>', methods=['POST'])
+def delete_file(base_name):
+    if 'username' not in session:
+        return redirect(url_for('login'))
+        
+    user_output_dir = get_user_dir(OUTPUT_FOLDER, session['username'])
+    
+    # Percorsi dei file da eliminare
+    zip_path = os.path.join(user_output_dir, f"{base_name}.zip")
+    recomposed_path = os.path.join(user_output_dir, f"{base_name}_recomposed.mp3")
+    
+    deleted = False
+    
+    if os.path.exists(zip_path):
+        os.remove(zip_path)
+        deleted = True
+        
+    if os.path.exists(recomposed_path):
+        os.remove(recomposed_path)
+        deleted = True
+        
+    if deleted:
+        flash(f'Esportazione "{base_name}" eliminata con successo.')
+    else:
+        flash(f'Impossibile trovare l\'esportazione "{base_name}".')
+        
+    return redirect(url_for('index'))
+
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=5764)

@@ -1,0 +1,77 @@
+# Felipe - Audio Stem Separator & Mixer 🎵
+
+**Felipe** è un'applicazione web sviluppata in Python (con il framework Flask) che permette di caricare tracce audio e separarle nei loro strumenti principali (voce, basso, batteria e altro) utilizzando l'intelligenza artificiale di **Demucs**. Inoltre, offre la possibilità di ricombinare queste tracce rimuovendo strumenti specifici (es. per creare basi musicali senza voce o senza batteria) sfruttando **FFmpeg**.
+
+L'applicazione supporta il multi-utente, gestendo caricamenti e download separatamente per ogni account registrato.
+
+---
+
+## ✨ Cosa può fare (Funzionalità)
+
+- **Sistema Multi-Utente:** Registrazione e Login. Ogni utente ha la sua cartella privata per gli upload e per i file elaborati.
+- **Upload File Audio:** Supporto per il caricamento di file `.mp3` e `.wav`.
+- **Separazione Tracce (Stems):** Utilizza `demucs` per dividere l'audio originale in 4 tracce separate:
+  - 🎤 `vocals.mp3` (Voce)
+  - 🎸 `bass.mp3` (Basso)
+  - 🥁 `drums.mp3` (Batteria)
+  - 🎹 `other.mp3` (Altri strumenti)
+- **Riassemblaggio Audio (Mixer):** Ricrea una nuova traccia combinata (usando `ffmpeg`) rimuovendo uno strumento a scelta:
+  - `no_vocals` (Crea una base musicale / Karaoke)
+  - `no_bass` (Utile per i bassisti per esercitarsi)
+  - `no_drums` (Utile per i batteristi)
+- **Elaborazione in Background:** L'estrazione e il riassemblaggio avvengono in thread separati per non bloccare il sito. Sulla dashboard potrai visualizzare lo stato di avanzamento ("Estrazione tracce", "Riassemblaggio...", "Completato").
+- **Download dei Risultati:** Permette di scaricare direttamente:
+  - Un archivio `.zip` contenente tutte le tracce separate e la traccia riassemblata.
+  - Direttamente il file audio `.mp3` ricomposto.
+
+---
+
+## 🛠️ Come funziona sotto il cofano
+
+1. L'utente si logga, carica un file audio e seleziona l'azione desiderata (es. `no_vocals`).
+2. Viene lanciato un **Thread in background** per gestire il processo pesante.
+3. **Demucs** entra in gioco ed elabora il file separando le tracce in una cartella temporanea.
+4. **FFmpeg** prende le tracce necessarie (in base all'azione scelta) e le unisce usando il filtro `amix` per generare l'audio ricomposto.
+5. L'app raggruppa le singole tracce estratte e il file finale in un file `.zip`.
+6. La dashboard dell'utente si aggiorna, permettendo il download del materiale dalla cartella di `output/nome_utente`.
+7. Le password e le utenze vengono gestite in maniera semplice su un file di testo locale (`users.txt`).
+
+---
+
+## 🚀 Installazione e Avvio
+
+### Prerequisiti
+Assicurati di avere installato sul tuo sistema:
+- **Python 3.x**
+- **FFmpeg** (deve essere installato sul sistema operativo e accessibile via riga di comando)
+
+### Setup Veloce (Linux/macOS)
+
+Il progetto include uno script automatico per l'installazione delle dipendenze Python:
+
+```bash
+# 1. Clona la repository
+git clone https://github.com/Samuobe/Felipe.git
+cd Felipe
+
+# 2. Avvia lo script di setup per installare Flask e Demucs
+chmod +x setup.sh
+./setup.sh
+
+# 3. Avvia l'applicazione
+python3 main.py
+```
+
+### Setup Manuale
+
+Se preferisci installare i pacchetti manualmente (o se sei su Windows):
+
+```bash
+# Installa le dipendenze Python
+pip install flask demucs werkzeug
+
+# Avvia l'app
+python main.py
+```
+
+L'applicazione sarà in ascolto all'indirizzo `http://0.0.0.0:5764/`. Potrai accedervi dal browser digitando `http://localhost:5764/` (o dall'IP della macchina host se eseguito su un server).
