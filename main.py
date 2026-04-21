@@ -83,7 +83,7 @@ def index():
         youtube_url = request.form.get('youtube_url')
         if youtube_url and youtube_url.strip():
             try:
-                # Impostazioni per scaricare l'audio
+                # Impostazioni per scaricare l'audio e aggirare i blocchi 403
                 ydl_opts = {
                     'format': 'bestaudio/best',
                     'postprocessors': [{
@@ -91,10 +91,11 @@ def index():
                         'preferredcodec': 'mp3',
                         'preferredquality': '192',
                     }],
-                    # Usiamo l'ID del video come nome iniziale per evitare crash con emoji/caratteri strani
                     'outtmpl': os.path.join(user_upload_dir, '%(id)s.%(ext)s'),
                     'restrictfilenames': True,
                     'noplaylist': True,
+                    'source_address': '0.0.0.0',
+                    'extractor_args': {'youtube': ['player_client=android']} 
                 }
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
