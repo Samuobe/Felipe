@@ -94,11 +94,15 @@ def index():
                     'outtmpl': os.path.join(user_upload_dir, '%(id)s.%(ext)s'),
                     'restrictfilenames': True,
                     'noplaylist': True,
-                    'source_address': '0.0.0.0',
-                    # Dice a yt-dlp di comportarsi esattamente come Chrome
-                    'impersonate': 'chrome', 
-                    # Usa il client web predefinito rimuovendo i client mobili obsoleti
-                    'extractor_args': {'youtube': ['player_client=default,-android_sdkless']}
+                    
+                    # --- FIX RETE / TIMEOUT ---
+                    'compat_opts': ['no-youtube-unavailable-videos'], # Evita controlli extra lenti
+                    'source_address': '0.0.0.0', # Forza IPv4 locale
+                    'force_ipv4': True,          # Forza IPv4 a livello DNS (fondamentale in LXC)
+                    
+                    # --- FIX ANTI-BOT ---
+                    'impersonate': 'chrome',
+                    'extractor_args': {'youtube': ['player_client=android']} # Android è spesso più leggero del client web
                 }
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
